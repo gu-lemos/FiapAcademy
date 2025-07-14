@@ -65,7 +65,7 @@ Principais padrões e práticas:
 
 2. **Clone o repositório:**
    ```bash
-   git clone <url-do-repositorio>
+   git clone https://github.com/gu-lemos/FiapAcademy.git
    cd FiapAcademyAdmin
    ```
 
@@ -88,5 +88,3 @@ Principais padrões e práticas:
    cd src/FiapAcademyAdmin.Tests
    dotnet test
    ```
-
-O sistema já vem configurado para rodar com banco de dados em memória, facilitando testes e desenvolvimento.
