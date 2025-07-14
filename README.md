@@ -48,7 +48,7 @@ O sistema segue o padrão **Clean Architecture**, dividido em camadas bem defini
 - **Application**: Camada de aplicação, com serviços, handlers, DTOs, validações e uso do MediatR para orquestração.
 - **Infrastructure**: Implementação de repositórios, contexto de dados (Entity Framework InMemory) e integrações externas.
 - **API**: Exposição de endpoints RESTful, autenticação JWT, documentação Swagger e integração com as camadas internas.
-- **Web**: Interface Blazor Server, consumindo a API e apresentando uma experiência moderna e responsiva ao usuário.
+- **Web**: Interface Blazor Server, consumindo todo o back-end e apresentando uma experiência moderna e responsiva ao usuário.
 
 Principais padrões e práticas:
 - **MediatR** para handlers de comandos e queries (CQRS).
