@@ -1,0 +1,52 @@
+﻿@using FiapAcademyAdmin.Application.Interfaces.Services
+@using FiapAcademyAdmin.Web.Services
+
+@inject IAuthStateService AuthStateService
+@inject NavigationManager NavigationManager
+
+@implements IDisposable
+
+<div class="navmenu-header ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">FIAP Academy Admin</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                <i class="fas fa-home me-2"></i> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/alunos" Match="NavLinkMatch.Prefix">
+                <i class="fas fa-users me-2"></i> Alunos
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/turmas" Match="NavLinkMatch.Prefix">
+                <i class="fas fa-chalkboard-teacher me-2"></i> Turmas
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        AuthStateService.AuthenticationStateChanged += OnAuthStateChanged;
+    }
+
+    private void OnAuthStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        AuthStateService.AuthenticationStateChanged -= OnAuthStateChanged;
+    }
+}

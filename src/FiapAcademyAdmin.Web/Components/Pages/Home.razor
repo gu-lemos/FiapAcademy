@@ -1,0 +1,102 @@
+﻿@page "/"
+
+@using FiapAcademyAdmin.Web.Components.Shared
+
+<PageTitle>FIAP Academy Admin</PageTitle>
+
+<RedirectToLogin>
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <div class="col-12">
+                <div class="card border-0">
+                    <div class="card-body">
+                        <div class="row justify-content-center">
+                            <div class="col-md-8 text-center">
+                                <h1 class="mb-4">
+                                    <i class="fas fa-graduation-cap text-primary"></i>
+                                    Bem-vindo ao Sistema
+                                </h1>
+                                <p class="lead mb-5">
+                                    Sistema de gerenciamento de alunos e turmas da FIAP Academy
+                                </p>
+                                
+                                <div class="row mb-5">
+                                    <div class="col-md-6">
+                                        <div class="card h-100 shadow-sm">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-users fa-4x text-primary mb-4"></i>
+                                                <h4 class="card-title mb-3">Gerenciar Alunos</h4>
+                                                <p class="card-text mb-4">
+                                                    Visualize, cadastre, edite e gerencie todos os alunos cadastrados no sistema.
+                                                </p>
+                                                <a href="/alunos" class="btn btn-primary btn-lg">
+                                                    <i class="fas fa-users me-2"></i>
+                                                    Acessar Alunos
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card h-100 shadow-sm">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-chalkboard-teacher fa-4x text-success mb-4"></i>
+                                                <h4 class="card-title mb-3">Gerenciar Turmas</h4>
+                                                <p class="card-text mb-4">
+                                                    Visualize, cadastre, edite e gerencie todas as turmas e suas associações com alunos.
+                                                </p>
+                                                <a href="/turmas" class="btn btn-success btn-lg">
+                                                    <i class="fas fa-chalkboard-teacher me-2"></i>
+                                                    Acessar Turmas
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h5 class="card-title">
+                                                    <i class="fas fa-info-circle text-info me-2"></i>
+                                                    Sobre o Sistema
+                                                </h5>
+                                                <p class="card-text">
+                                                    O FIAP Academy Admin é uma plataforma completa para gerenciamento de alunos e turmas, 
+                                                    oferecendo funcionalidades de cadastro, edição, exclusão e consulta de informações 
+                                                    dos estudantes da FIAP Academy.
+                                                </p>
+                                                <div class="row text-center">
+                                                    <div class="col-md-3">
+                                                        <i class="fas fa-database text-primary fa-2x mb-2"></i>
+                                                        <h6>Dados Seguros</h6>
+                                                        <small class="text-muted">Informações protegidas e organizadas</small>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <i class="fas fa-search text-info fa-2x mb-2"></i>
+                                                        <h6>Busca Rápida</h6>
+                                                        <small class="text-muted">Encontre alunos e turmas facilmente</small>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <i class="fas fa-edit text-warning fa-2x mb-2"></i>
+                                                        <h6>Edição Simples</h6>
+                                                        <small class="text-muted">Atualize dados com facilidade</small>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <i class="fas fa-shield-alt text-success fa-2x mb-2"></i>
+                                                        <h6>Autenticação JWT</h6>
+                                                        <small class="text-muted">Sistema seguro com tokens JWT</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</RedirectToLogin>

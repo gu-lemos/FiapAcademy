@@ -1,0 +1,267 @@
+@page "/alunos/cadastrar"
+
+@using FiapAcademyAdmin.Application.DTOs.Command.Aluno
+@using FiapAcademyAdmin.Application.DTOs.Query.Turma
+@using FiapAcademyAdmin.Application.Handlers.Commands.Aluno.Create
+@using FiapAcademyAdmin.Application.Handlers.Queries.Turma.GetAll
+@using FiapAcademyAdmin.Application.Interfaces.Services
+@using FiapAcademyAdmin.Web.Components.Shared
+@using MediatR
+
+@inject IMediator Mediator
+@inject INotificationService NotificationService
+@inject NavigationManager Navigation
+
+<PageTitle>Cadastrar Aluno</PageTitle>
+
+<RedirectToLogin>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="mb-0">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Cadastrar Novo Aluno
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="@aluno" OnValidSubmit="HandleValidSubmit" FormName="CadastroAluno">
+                            @if (validationErrors.Any())
+                            {
+                                <div class="alert alert-danger">
+                                    <ul class="mb-0">
+                                        @foreach (var error in validationErrors)
+                                        {
+                                            <li>@error</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="nome" class="form-label">Nome</label>
+                                        <InputText id="nome" class="form-control" @bind-Value="aluno.Nome" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <InputText id="email" class="form-control" @bind-Value="aluno.Email" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="dataNascimento" class="form-label">Data de Nascimento</label>
+                                        <InputDate id="dataNascimento" class="form-control" @bind-Value="aluno.DataNascimento" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="cpf" class="form-label">CPF</label>
+                                        <InputText id="cpf" class="form-control" @bind-Value="aluno.Cpf" type="text" oninput="this.value = this.value.replace(/[^0-9]/g, '')" maxlength="11" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="senha" class="form-label">Senha</label>
+                                        <div class="input-group">
+                                            <InputText type="@(mostrarSenha ? "text" : "password")" id="senha" class="form-control" @bind-Value="aluno.Senha" />
+                                            <button type="button" class="btn btn-outline-secondary" @onclick="ToggleMostrarSenha" tabindex="-1">
+                                                <i class="fas @(mostrarSenha ? "fa-eye-slash" : "fa-eye")"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Turmas</label>
+                                        @if (turmas != null && turmas.Turmas.Any())
+                                        {
+                                            foreach (var turma in turmas.Turmas)
+                                            {
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="turma_@turma.Id" value="@turma.Id"
+                                                           @onchange="e => OnTurmaCheckboxChanged(e, turma.Id)"
+                                                           checked="@aluno.TurmaIds.Contains(turma.Id)" />
+                                                    <label class="form-check-label" for="turma_@turma.Id">@turma.Nome</label>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="text-muted">Nenhuma turma disponível.</div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="/alunos" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>
+                                    Voltar
+                                </a>
+                                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        <span>Cadastrando...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-save me-2"></i>
+                                        <span>Cadastrar</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</RedirectToLogin>
+
+@code {
+    private CreateAlunoCommandDTO aluno = new();
+    private bool isSubmitting = false;
+    private bool mostrarSenha = false;
+    private TurmaListQueryDTO? turmas;
+    private List<string> validationErrors = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarTurmas();
+    }
+
+    private async Task CarregarTurmas()
+    {
+        var query = new GetTurmasQuery { Page = 1, PageSize = 100 };
+        var result = await Mediator.Send(query);
+
+        if (result.IsSuccess)
+        {
+            turmas = result.Data;
+        }
+    }
+
+    private void ToggleMostrarSenha()
+    {
+        mostrarSenha = !mostrarSenha;
+    }
+
+    private void OnTurmaCheckboxChanged(ChangeEventArgs e, int turmaId)
+    {
+        if (e.Value is bool isChecked)
+        {
+            if (isChecked)
+            {
+                if (!aluno.TurmaIds.Contains(turmaId))
+                    aluno.TurmaIds.Add(turmaId);
+            }
+            else
+            {
+                if (aluno.TurmaIds.Contains(turmaId))
+                    aluno.TurmaIds.Remove(turmaId);
+            }
+        }
+    }
+
+    private bool BeValidCpf(string cpf)
+    {
+        if (string.IsNullOrWhiteSpace(cpf))
+            return false;
+        var numbers = System.Text.RegularExpressions.Regex.Replace(cpf, @"[^\d]", "");
+        if (numbers.Length != 11)
+            return false;
+        if (numbers.All(c => c == numbers[0]))
+            return false;
+        return true;
+    }
+
+    private bool BeStrongPassword(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+            return false;
+        if (password.Length < 8)
+            return false;
+        if (!password.Any(char.IsUpper))
+            return false;
+        if (!password.Any(char.IsLower))
+            return false;
+        if (!password.Any(char.IsDigit))
+            return false;
+        if (!password.Any(c => !char.IsLetterOrDigit(c)))
+            return false;
+        return true;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(aluno.Nome))
+            validationErrors.Add("Nome é obrigatório.");
+        else if (aluno.Nome.Length < 3)
+            validationErrors.Add("Nome deve ter no mínimo 3 caracteres.");
+        else if (aluno.Nome.Length > 100)
+            validationErrors.Add("Nome deve ter no máximo 100 caracteres.");
+
+        if (aluno.DataNascimento == default)
+            validationErrors.Add("Data de nascimento é obrigatória.");
+        else if (aluno.DataNascimento >= DateTime.Today)
+            validationErrors.Add("Data de nascimento deve ser anterior a hoje.");
+        else if (aluno.DataNascimento < DateTime.Today.AddYears(-120))
+            validationErrors.Add("Data de nascimento inválida.");
+
+        if (string.IsNullOrWhiteSpace(aluno.Cpf))
+            validationErrors.Add("CPF é obrigatório.");
+        else if (!BeValidCpf(aluno.Cpf))
+            validationErrors.Add("CPF deve conter 11 dígitos numéricos.");
+
+        if (string.IsNullOrWhiteSpace(aluno.Email))
+            validationErrors.Add("E-mail é obrigatório.");
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(aluno.Email, @"^[^@]+@[^@]+\.[^@]+$"))
+            validationErrors.Add("E-mail deve conter o caractere @ e ser válido.");
+        else if (aluno.Email.Length > 100)
+            validationErrors.Add("E-mail deve ter no máximo 100 caracteres.");
+
+        if (string.IsNullOrWhiteSpace(aluno.Senha))
+            validationErrors.Add("Senha é obrigatória.");
+        else if (aluno.Senha.Length < 8)
+            validationErrors.Add("Senha deve ter no mínimo 8 caracteres.");
+        else if (!BeStrongPassword(aluno.Senha))
+            validationErrors.Add("Senha deve conter letras maiúsculas, minúsculas, números e símbolos especiais.");
+
+        if (validationErrors.Any())
+        {
+            isSubmitting = false;
+            StateHasChanged();
+            return;
+        }
+
+        isSubmitting = true;
+
+        var command = new CreateAlunoCommand { Aluno = aluno };
+        var result = await Mediator.Send(command);
+
+        if (result.IsSuccess)
+        {
+            NotificationService.ShowToast($"Aluno(a) {aluno.Nome} cadastrado com sucesso!", "success", "fas fa-check-circle");
+            Navigation.NavigateTo("/alunos");
+        }
+        else
+        {
+            NotificationService.ShowToast($"Erro ao cadastrar aluno(a) {aluno.Nome}: {result.Message}", "error", "fas fa-exclamation-circle");
+
+            isSubmitting = false;
+        }
+    }
+} 

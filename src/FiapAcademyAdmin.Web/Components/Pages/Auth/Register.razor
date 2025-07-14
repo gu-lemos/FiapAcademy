@@ -1,0 +1,154 @@
+@page "/register"
+@layout BlankLayout
+
+@using FiapAcademyAdmin.Application.DTOs.Command.Auth
+@using FiapAcademyAdmin.Application.Interfaces.Services
+@using FiapAcademyAdmin.Web.Components.Layout
+@using FiapAcademyAdmin.Web.Services
+
+@inject IAuthStateService AuthStateService
+@inject NavigationManager NavigationManager
+@inject INotificationService NotificationService
+
+<PageTitle>Registro - FiapAcademyAdmin</PageTitle>
+
+@if (AuthStateService.IsAuthenticated)
+{
+    <div class="d-flex justify-content-center align-items-center vh-100 bg-light">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-3">Redirecionando para home...</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container d-flex justify-content-center align-items-center vh-100 login-gradient-bg">
+        <div class="card auth-card shadow p-4">
+            <h2 class="auth-title text-center">Registro</h2>
+            <EditForm Model="@registerModel" OnValidSubmit="HandleRegister" FormName="RegisterForm">
+                @if (validationErrors.Any())
+                {
+                    <div class="alert alert-danger auth-alert">
+                        <ul class="mb-0">
+                            @foreach (var error in validationErrors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+                <div class="mb-3">
+                    <label for="nome" class="form-label auth-label">Nome</label>
+                    <InputText id="nome" class="form-control auth-input" @bind-Value="registerModel.Nome" placeholder="Digite seu nome completo" />
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label auth-label">Email</label>
+                    <InputText id="email" type="email" class="form-control auth-input" @bind-Value="registerModel.Email" placeholder="Digite seu email" />
+                </div>
+                <div class="mb-3">
+                    <label for="senha" class="form-label auth-label">Senha</label>
+                    <InputText type="password" id="senha" class="form-control auth-input" @bind-Value="registerModel.Senha" placeholder="Digite sua senha" />
+                </div>
+                <div class="mb-3">
+                    <label for="confirmarSenha" class="form-label auth-label">Confirmar Senha</label>
+                    <InputText type="password" id="confirmarSenha" class="form-control auth-input" @bind-Value="registerModel.ConfirmarSenha" placeholder="Confirme sua senha" />
+                </div>
+                <button type="submit" class="btn auth-btn w-100" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Criando conta...</span>
+                    }
+                    else
+                    {
+                        <span>Criar Conta</span>
+                    }
+                </button>
+            </EditForm>
+            <div class="mt-3 text-center">
+                <small class="text-muted">
+                    Já tem conta? <a href="/login" class="auth-link">Faça login</a>
+                </small>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private RegisterCommandDTO registerModel = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private List<string> validationErrors = new();
+
+    protected override void OnInitialized()
+    {
+        if (AuthStateService.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleRegister()
+    {
+        validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(registerModel.Nome))
+            validationErrors.Add("O nome é obrigatório.");
+
+        if (string.IsNullOrWhiteSpace(registerModel.Email))
+            validationErrors.Add("O email é obrigatório.");
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(registerModel.Email, @"^[^@]+@[^@]+\.[^@]+$"))
+            validationErrors.Add("Email inválido.");
+
+        if (string.IsNullOrWhiteSpace(registerModel.Senha))
+            validationErrors.Add("A senha é obrigatória.");
+        else if (registerModel.Senha.Length < 8)
+            validationErrors.Add("A senha deve ter no mínimo 8 caracteres.");
+        else if (!registerModel.Senha.Any(char.IsUpper) || !registerModel.Senha.Any(char.IsLower) ||
+                 !registerModel.Senha.Any(char.IsDigit) || !registerModel.Senha.Any(c => !char.IsLetterOrDigit(c)))
+            validationErrors.Add("A senha deve conter letras maiúsculas, minúsculas, números e símbolos especiais.");
+
+        if (string.IsNullOrWhiteSpace(registerModel.ConfirmarSenha))
+            validationErrors.Add("A confirmação de senha é obrigatória.");
+        else if (registerModel.Senha != registerModel.ConfirmarSenha)
+            validationErrors.Add("As senhas não coincidem.");
+
+        if (validationErrors.Any())
+        {
+            StateHasChanged();
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var success = await AuthStateService.RegisterAsync(registerModel.Nome, registerModel.Email, registerModel.Senha, registerModel.ConfirmarSenha);
+
+            if (success)
+            {
+                NotificationService.ShowToast($"Conta criada com sucesso! Faça login para continuar.", "success", "fas fa-check-circle");
+                NavigationManager.NavigateTo("/login");
+            }
+            else
+            {
+                errorMessage = "Erro ao criar conta. Verifique os dados e tente novamente.";
+                NotificationService.ShowToast($"{errorMessage}", "error", "fas fa-exclamation-circle");
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowToast($"{ex.Message}", "error", "fas fa-exclamation-circle");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+} 

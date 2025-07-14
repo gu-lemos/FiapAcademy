@@ -1,0 +1,30 @@
+﻿@using FiapAcademyAdmin.Application.Interfaces.Services
+@using FiapAcademyAdmin.Web.Services
+
+@inject IAuthStateService AuthStateService
+@inject NavigationManager NavigationManager
+
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        @{
+            var isAuthenticated = AuthStateService.IsAuthenticated;
+            var currentPath = NavigationManager.Uri;
+            var isLoginPage = currentPath.Contains("/login", StringComparison.OrdinalIgnoreCase);
+            
+            if (isAuthenticated && isLoginPage)
+            {
+                NavigationManager.NavigateTo("/", true);
+                return;
+            }
+        }
+        
+        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="typeof(Layout.MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

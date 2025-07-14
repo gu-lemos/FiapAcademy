@@ -1,0 +1,269 @@
+﻿@page "/alunos"
+
+@using System.Timers
+@using FiapAcademyAdmin.Application.DTOs.Query
+@using FiapAcademyAdmin.Application.DTOs.Query.Aluno
+@using FiapAcademyAdmin.Application.Handlers.Commands
+@using FiapAcademyAdmin.Application.Handlers.Commands.Aluno.Delete
+@using FiapAcademyAdmin.Application.Handlers.Queries
+@using FiapAcademyAdmin.Application.Handlers.Queries.Aluno.GetAll
+@using FiapAcademyAdmin.Application.Interfaces
+@using FiapAcademyAdmin.Application.Interfaces.Services
+@using FiapAcademyAdmin.Web.Components.Shared
+@using FiapAcademyAdmin.Web.Services
+@using MediatR
+
+@inject IMediator Mediator
+@inject INotificationService NotificationService
+@inject NavigationManager Navigation
+
+<RedirectToLogin>
+    <h1>FIAP Academy Admin</h1>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <div class="col-12">
+                <div class="card border-0">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Lista de Alunos</h5>
+                        <div>
+                            <button class="btn btn-success" @onclick="AdicionarAluno">Adicionar Aluno</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Buscar Aluno</label>
+                                <input type="text" class="form-control"
+                                       @bind="filtroGeral"
+                                       @oninput="OnFiltroChanged"
+                                       placeholder="Digite para buscar por nome, CPF ou email..." />
+                            </div>
+                        </div>
+
+                        @if (isLoading)
+                        {
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                                <p class="mt-2">Carregando...</p>
+                            </div>
+                        }
+                        else if (alunos != null)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nome</th>
+                                            <th>Data Nascimento</th>
+                                            <th>CPF</th>
+                                            <th>Email</th>
+                                            <th>Turmas</th>
+                                            <th>Data Cadastro</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var aluno in alunos.Alunos)
+                                        {
+                                            <tr>
+                                                <td>@aluno.Id</td>
+                                                <td>@aluno.Nome</td>
+                                                <td>@aluno.DataNascimento.ToShortDateString()</td>
+                                                <td>@FormatarCpf(aluno.Cpf)</td>
+                                                <td>@aluno.Email</td>
+                                                <td>
+                                                    @if (aluno.Turmas != null && aluno.Turmas.Any())
+                                                    {
+                                                        <span class="badge bg-primary">@string.Join(", ", aluno.Turmas.OrderBy(t => t))</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">Sem matrícula</span>
+                                                    }
+                                                </td>
+                                                <td>@aluno.DataCadastro.ToShortDateString()</td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-sm btn-primary" @onclick="@(() => EditarAluno(aluno.Id))">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-danger" @onclick="@(() => ConfirmarExclusao(aluno))">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            @if (alunos.TotalPages > 1)
+                            {
+                                <nav>
+                                    <ul class="pagination">
+                                        @for (int i = 1; i <= alunos.TotalPages; i++)
+                                        {
+                                            var pageNumber = i;
+                                            <li class="page-item @(pageNumber == alunos.Page ? "active" : "")">
+                                                <button type="button" class="page-link" @onclick="@(() => CarregarPagina(pageNumber))">@pageNumber</button>
+                                            </li>
+                                        }
+                                    </ul>
+                                </nav>
+                            }
+                            <div class="mt-3">
+                                <p>Total de alunos: @alunos.TotalCount</p>
+                                <p>Página @alunos.Page de @alunos.TotalPages</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ConfirmDialog 
+        IsVisible="showConfirmDialog"
+        Title="Confirmar Exclusão"
+        Message="Tem certeza que deseja excluir este aluno?"
+        ConfirmText="Excluir"
+        LoadingText="Excluindo..."
+        IsLoading="isExcluindo"
+        OnConfirm="ExcluirAluno"
+        OnCancel="CancelarExclusao" />
+</RedirectToLogin>
+
+@code {
+    private bool isLoading = false;
+    private AlunoListQueryDTO? alunos;
+    private int currentPage = 1;
+    private string filtroGeral = string.Empty;
+    private Timer? debounceTimer;
+    
+    private bool showConfirmDialog = false;
+    private AlunoQueryDTO? alunoParaExcluir;
+    private bool isExcluindo = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarAlunos();
+    }
+
+    public void Dispose()
+    {
+        debounceTimer?.Dispose();
+    }
+
+    private async Task CarregarAlunos(int page = 1)
+    {
+        isLoading = true;
+        currentPage = page;
+
+        var query = new GetAlunosQuery 
+        { 
+            Page = page, 
+            PageSize = 10,
+            Filtro = string.IsNullOrWhiteSpace(filtroGeral) ? null : filtroGeral
+        };
+
+        var result = await Mediator.Send(query);
+        
+        if (result.IsSuccess)
+        {
+            alunos = result.Data;
+        }
+        else
+        {
+            NotificationService.ShowToast($"Erro ao carregar alunos: {result.Message}", "error", "fas fa-exclamation-circle");
+        }
+        
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task CarregarPagina(int page)
+    {
+        await CarregarAlunos(page);
+    }
+
+    private void OnFiltroChanged(ChangeEventArgs e)
+    {
+        filtroGeral = e.Value?.ToString() ?? string.Empty;
+        
+        debounceTimer?.Dispose();
+        debounceTimer = new Timer(500);
+        debounceTimer.Elapsed += async (sender, args) =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await CarregarAlunos(1);
+                StateHasChanged();
+            });
+        };
+        debounceTimer.AutoReset = false;
+        debounceTimer.Start();
+    }
+
+    private string FormatarCpf(string cpf)
+    {
+        if (string.IsNullOrWhiteSpace(cpf))
+            return string.Empty;
+
+        if (cpf.Length == 11)
+        {
+            return $"{cpf.Substring(0, 3)}.{cpf.Substring(3, 3)}.{cpf.Substring(6, 3)}-{cpf.Substring(9, 2)}";
+        }
+        
+        return cpf;
+    }
+
+    private void AdicionarAluno()
+    {
+        Navigation.NavigateTo("/alunos/cadastrar");
+    }
+
+    private void EditarAluno(int id)
+    {
+        Navigation.NavigateTo($"/alunos/editar/{id}");
+    }
+
+    private void ConfirmarExclusao(AlunoQueryDTO aluno)
+    {
+        alunoParaExcluir = aluno;
+        showConfirmDialog = true;
+    }
+
+    private void CancelarExclusao()
+    {
+        showConfirmDialog = false;
+        alunoParaExcluir = null;
+    }
+
+    private async Task ExcluirAluno()
+    {
+        if (alunoParaExcluir == null) return;
+
+        isExcluindo = true;
+        
+        var command = new DeleteAlunoCommand { Id = alunoParaExcluir.Id };
+        var result = await Mediator.Send(command);
+        
+        if (result.IsSuccess)
+        {
+            NotificationService.ShowToast("Aluno excluído com sucesso!", "success", "fas fa-check-circle");
+            await CarregarAlunos(currentPage);
+        }
+        else
+        {
+            NotificationService.ShowToast($"Erro ao excluir aluno: {result.Message}", "error", "fas fa-exclamation-circle");
+        }
+        
+        showConfirmDialog = false;
+        alunoParaExcluir = null;
+        isExcluindo = false;
+    }
+}

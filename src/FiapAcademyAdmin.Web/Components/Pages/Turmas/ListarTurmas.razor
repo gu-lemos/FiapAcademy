@@ -1,0 +1,255 @@
+@page "/turmas"
+
+@using System.Timers
+@using FiapAcademyAdmin.Application.DTOs.Query.Turma
+@using FiapAcademyAdmin.Application.Handlers.Commands.Turma.Delete
+@using FiapAcademyAdmin.Application.Handlers.Queries.Turma.GetAll
+@using FiapAcademyAdmin.Application.Interfaces.Services
+@using FiapAcademyAdmin.Web.Components.Shared
+@using FiapAcademyAdmin.Web.Services
+@using MediatR
+
+@inject IMediator Mediator
+@inject INotificationService NotificationService
+@inject NavigationManager Navigation
+
+<PageTitle>Turmas - FiapAcademyAdmin</PageTitle>
+
+<RedirectToLogin>
+    <h1>FIAP Academy Admin</h1>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <div class="col-12">
+                <div class="card border-0">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Lista de Turmas</h5>
+                        <div>
+                            <button class="btn btn-success" @onclick="AdicionarTurma">Adicionar Turma</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Buscar Turma</label>
+                                <input type="text" class="form-control"
+                                       @bind="filtroGeral"
+                                       @oninput="OnFiltroChanged"
+                                       placeholder="Digite para buscar por nome ou descrição..." />
+                            </div>
+                        </div>
+
+                        @if (isLoading)
+                        {
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                                <p class="mt-2">Carregando...</p>
+                            </div>
+                        }
+                        else if (turmas != null)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nome</th>
+                                            <th>Descrição</th>
+                                            <th>Alunos</th>
+                                            <th>Data Cadastro</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var turma in turmas.Turmas)
+                                        {
+                                            <tr>
+                                                <td>@turma.Id</td>
+                                                <td>@turma.Nome</td>
+                                                <td>@turma.Descricao</td>
+                                                <td>
+                                                    @if (turma.Alunos.Any())
+                                                    {
+                                                        <div class="d-flex flex-wrap gap-1">
+                                                            @foreach (var aluno in turma.Alunos.OrderBy(a => a.Nome))
+                                                            {
+                                                                <span class="badge bg-primary">@aluno.Nome</span>
+                                                            }
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">Sem alunos</span>
+                                                    }
+                                                </td>
+                                                <td>@turma.DataCadastro.ToShortDateString()</td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <button type="button" class="btn btn-sm btn-primary" @onclick="@(() => EditarTurma(turma.Id))">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-danger" @onclick="@(() => ConfirmarExclusao(turma))">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            @if (turmas.TotalPages > 1)
+                            {
+                                <nav>
+                                    <ul class="pagination">
+                                        @for (int i = 1; i <= turmas.TotalPages; i++)
+                                        {
+                                            var pageNumber = i;
+                                            <li class="page-item @(pageNumber == turmas.Page ? "active" : "")">
+                                                <button type="button" class="page-link" @onclick="@(() => CarregarPagina(pageNumber))">@pageNumber</button>
+                                            </li>
+                                        }
+                                    </ul>
+                                </nav>
+                            }
+                            <div class="mt-3">
+                                <p>Total de turmas: @turmas.TotalCount</p>
+                                <p>Página @turmas.Page de @turmas.TotalPages</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ConfirmDialog 
+        IsVisible="showConfirmDialog"
+        Title="Confirmar Exclusão"
+        Message="Tem certeza que deseja excluir esta turma?"
+        ConfirmText="Excluir"
+        LoadingText="Excluindo..."
+        IsLoading="isExcluindo"
+        OnConfirm="ExcluirTurma"
+        OnCancel="CancelarExclusao" />
+</RedirectToLogin>
+
+@code {
+    private bool isLoading = false;
+    private TurmaListQueryDTO? turmas;
+    private int currentPage = 1;
+    private string filtroGeral = string.Empty;
+    private Timer? debounceTimer;
+    
+    private bool showConfirmDialog = false;
+    private TurmaQueryDTO? turmaParaExcluir;
+    private bool isExcluindo = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarTurmas();
+    }
+
+    public void Dispose()
+    {
+        debounceTimer?.Dispose();
+    }
+
+    private async Task CarregarTurmas(int page = 1)
+    {
+        isLoading = true;
+        currentPage = page;
+
+        var query = new GetTurmasQuery 
+        { 
+            Page = page, 
+            PageSize = 10,
+            Filtro = string.IsNullOrWhiteSpace(filtroGeral) ? null : filtroGeral
+        };
+
+        var result = await Mediator.Send(query);
+        
+        if (result.IsSuccess)
+        {
+            turmas = result.Data;
+        }
+        else
+        {
+            NotificationService.ShowToast($"Erro ao carregar turmas: {result.Message}", "error", "fas fa-exclamation-circle");
+        }
+        
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task CarregarPagina(int page)
+    {
+        await CarregarTurmas(page);
+    }
+
+    private void OnFiltroChanged(ChangeEventArgs e)
+    {
+        filtroGeral = e.Value?.ToString() ?? string.Empty;
+        
+        debounceTimer?.Dispose();
+        debounceTimer = new Timer(500);
+        debounceTimer.Elapsed += async (sender, args) =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await CarregarTurmas(1);
+                StateHasChanged();
+            });
+        };
+        debounceTimer.AutoReset = false;
+        debounceTimer.Start();
+    }
+
+    private void AdicionarTurma()
+    {
+        Navigation.NavigateTo("/turmas/cadastrar");
+    }
+
+    private void EditarTurma(int id)
+    {
+        Navigation.NavigateTo($"/turmas/editar/{id}");
+    }
+
+    private void ConfirmarExclusao(TurmaQueryDTO turma)
+    {
+        turmaParaExcluir = turma;
+        showConfirmDialog = true;
+    }
+
+    private void CancelarExclusao()
+    {
+        showConfirmDialog = false;
+        turmaParaExcluir = null;
+    }
+
+    private async Task ExcluirTurma()
+    {
+        if (turmaParaExcluir == null) return;
+
+        isExcluindo = true;
+        
+        var command = new DeleteTurmaCommand { Id = turmaParaExcluir.Id };
+        var result = await Mediator.Send(command);
+        
+        if (result.IsSuccess)
+        {
+            NotificationService.ShowToast("Turma excluída com sucesso!", "success", "fas fa-check-circle");
+            await CarregarTurmas(currentPage);
+        }
+        else
+        {
+            NotificationService.ShowToast($"Erro ao excluir turma: {result.Message}", "error", "fas fa-exclamation-circle");
+        }
+        
+        showConfirmDialog = false;
+        turmaParaExcluir = null;
+        isExcluindo = false;
+    }
+} 

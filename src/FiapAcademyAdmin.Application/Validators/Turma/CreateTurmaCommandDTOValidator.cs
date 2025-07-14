@@ -1,0 +1,21 @@
+using FluentValidation;
+using FiapAcademyAdmin.Application.DTOs.Command.Turma;
+
+namespace FiapAcademyAdmin.Application.Validators.Turma
+{
+    public class CreateTurmaCommandDTOValidator : AbstractValidator<CreateTurmaCommandDTO>
+    {
+        public CreateTurmaCommandDTOValidator()
+        {
+            RuleFor(x => x.Nome)
+                .NotEmpty().WithMessage("Nome é obrigatório")
+                .MaximumLength(100).WithMessage("Nome deve ter no máximo 100 caracteres")
+                .MinimumLength(3).WithMessage("Nome deve ter no mínimo 3 caracteres");
+
+            RuleFor(x => x.Descricao)
+                .NotEmpty().WithMessage("Descrição é obrigatória")
+                .MaximumLength(500).WithMessage("Descrição deve ter no máximo 500 caracteres")
+                .MinimumLength(10).WithMessage("Descrição deve ter no mínimo 10 caracteres");
+        }
+    }
+} 

@@ -1,0 +1,60 @@
+﻿@using FiapAcademyAdmin.Application.Interfaces.Services
+@using FiapAcademyAdmin.Web.Components.Shared
+@using FiapAcademyAdmin.Web.Services
+
+@inject IAuthStateService AuthStateService
+@inject NavigationManager NavigationManager
+
+@inherits LayoutComponentBase
+
+@implements IDisposable
+
+<div class="page d-flex flex-row">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+    <main class="flex-fill">
+        <nav class="navbar navbar-expand navbar-light bg-light border-bottom">
+            <div class="container-fluid">
+                <div class="ms-auto d-flex align-items-center">
+                    @if (AuthStateService.IsAuthenticated)
+                    {
+                        <span class="me-3 text-secondary">Seja bem-vindo, @AuthStateService.CurrentUser!</span>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="Logout">
+                            <i class="fas fa-sign-out-alt me-1"></i>
+                            Sair
+                        </button>
+                    }
+                </div>
+            </div>
+        </nav>
+        <article class="p-3">
+            @Body
+        </article>
+    </main>
+</div>
+
+<Toast />
+
+@code {
+    protected override void OnInitialized()
+    {
+        AuthStateService.AuthenticationStateChanged += OnAuthStateChanged;
+    }
+
+    private void OnAuthStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Logout()
+    {
+        AuthStateService.Logout();
+        NavigationManager.NavigateTo("/login", true);
+    }
+
+    public void Dispose()
+    {
+        AuthStateService.AuthenticationStateChanged -= OnAuthStateChanged;
+    }
+}
