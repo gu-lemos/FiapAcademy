@@ -35,7 +35,7 @@ Cada tecnologia foi escolhida para garantir robustez, escalabilidade, segurança
 
 ## Entidades Principais
 
-- **Aluno**: Representa um estudante, com dados como nome, data de nascimento, CPF, email, senha e histórico de matrículas.
+- **Aluno**: Representa um estudante, com dados como nome, data de nascimento, CPF, email e senha.
 - **Turma**: Representa uma turma, com nome, descrição e lista de alunos matriculados.
 - **Matrícula**: Relaciona um aluno a uma turma, registrando a data da matrícula.
 - **Usuário**: Responsável pelo acesso administrativo ao sistema, com autenticação e autorização via JWT.
@@ -61,7 +61,7 @@ Principais padrões e práticas:
 
 1. **Pré-requisitos:**
    - .NET 9.0 SDK instalado
-   - (Opcional) Visual Studio 2022+ ou VS Code
+   - Visual Studio 2022+ ou VS Code
 
 2. **Clone o repositório:**
    ```bash
